@@ -4,19 +4,30 @@ import unicodedata
 
 class WordTokenizer:
 
-    def tokenize(self, text: str) -> list[str]:
+    def tokenize(
+        self,
+        text: str,
+        preserve_decimals: bool = False,
+        preserve_currency: bool = False,
+    ) -> list[str]:
 
         if not isinstance(text, str):
             raise TypeError("Input must be a string")
 
         text = unicodedata.normalize("NFC", text)
 
-        # Match words (including Unicode letters, combining marks / diacritics
-        # in Devanagari \u0900-\u097F excluding dandas \u0964\u0965),
-        # contractions, and individual punctuation symbols.
-        word_char = r"[^\W_\u0964\u0965]|[\u0900-\u0963\u0966-\u097F]"
-        pattern = rf"(?:{word_char})+(?:['’](?:{word_char})+)*|[^\w\s\u0900-\u097F]|[\u0964\u0965]"
+        parts = []
+        if preserve_currency:
+            parts.append(r"(?:(?:Rs\.?|रू\.?|[$€£₹¥])\s*[\d०-९]+(?:[.,][\d०-९]+)*)")
+        if preserve_decimals:
+            parts.append(r"(?:[\d०-९]+(?:[.,][\d०-९]+)+)")
 
+        word_char = r"[^\W_\u0964\u0965]|[\u0900-\u0963\u0966-\u097F]"
+        parts.append(rf"(?:{word_char})+(?:['’](?:{word_char})+)*")
+        parts.append(r"[^\w\s\u0900-\u097F]")
+        parts.append(r"[\u0964\u0965]")
+
+        pattern = "|".join(parts)
         tokens = re.findall(pattern, text, flags=re.UNICODE)
 
         return tokens
